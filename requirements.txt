@@ -1,0 +1,6 @@
+jupyterlab>=4.0
+kaggle>=1.6
+pandas>=2.2
+scikit-learn>=1.5
+matplotlib>=3.9
+seaborn>=0.13

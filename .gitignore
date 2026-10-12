@@ -1,0 +1,16 @@
+# data is downloaded on demand (see docs/DATA_CARD.md); never committed
+data/
+# environments and caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+*.egg-info/
+build/
+dist/
+.DS_Store
+# scratch output of the CI notebook smoke test
+reports/_smoke/
+optuna.db
