@@ -1,0 +1,26 @@
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install
+        run: make setup
+      - name: Lint
+        run: make lint
+      - name: Cache Ames data
+        uses: actions/cache@v4
+        with:
+          path: data
+          key: ames-openml-42165
+      - name: Download data
+        run: make data
+      - name: Unit tests
+        run: make test
+      - name: Notebook smoke test (400-row subsample, tiny budgets)
+        run: make notebooks-smoke
