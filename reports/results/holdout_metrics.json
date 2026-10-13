@@ -1,0 +1,27 @@
+{
+  "model": "Blend (Ridge + LightGBM + XGBoost) (tuned LightGBM params)",
+  "n_train": 1168,
+  "n_holdout": 292,
+  "rmsle": 0.143314166518936,
+  "mae_usd": 13651.685984201044,
+  "rmse_usd": 29053.375598700666,
+  "mdape_pct": 4.814944473004965,
+  "mape_pct": 9.105881683353077,
+  "r2_log": 0.8617681498387245,
+  "rmsle_ci95_bootstrap": [
+    0.1035631490874796,
+    0.18727266158030811
+  ],
+  "interval_nominal": 0.9,
+  "interval_coverage_holdout": {
+    "Raw quantile GBM (5%-95%)": 0.7705479452054794,
+    "CQR": 0.9178082191780822,
+    "Constant-width conformal": 0.9212328767123288,
+    "Mondrian conformal (shipped)": 0.9075342465753424
+  },
+  "holdout_rmsle_excluding_flagged_outlier": 0.1234627401429195,
+  "pooled_oos_rmsle": 0.12009182948005993,
+  "worst_1pct_share_of_sq_error_pct": 36.56097508675507,
+  "spearman_perm_vs_shap": 0.5851743193515345,
+  "fit_seconds": 3.72718441701727
+}

@@ -1,0 +1,6 @@
+{
+  "01_eda_seconds": 2.4,
+  "02_modeling_seconds": 148.4,
+  "optuna_seconds": 101.0,
+  "03_error_analysis_seconds": 42.4
+}

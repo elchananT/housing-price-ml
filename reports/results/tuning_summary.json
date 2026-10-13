@@ -1,0 +1,9 @@
+{
+  "n_trials": 150,
+  "tune_seconds": 101.0,
+  "search_cv_best_rmsle": 0.11372732217910789,
+  "evaluation_cv_rmsle_of_tuned": 0.11802685732944945,
+  "cv": "5-fold x 3 repeats",
+  "n_train_rows": 1168,
+  "seed": 42
+}
