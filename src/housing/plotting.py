@@ -52,14 +52,13 @@ def set_style() -> None:
 
 
 def headline(ax, title: str, subtitle: str | None = None) -> None:
-    """Left-aligned finding-style title with an optional muted subtitle."""
+    """Left-aligned finding-style title with an optional muted subtitle (offsets in points)."""
     ax.set_title("")
-    y = 1.14 if subtitle else 1.05
-    ax.text(0, y, title, transform=ax.transAxes, fontsize=13.5, fontweight="bold",
-            color=INK, va="bottom", ha="left")  # fmt: skip
+    kw = {"xycoords": "axes fraction", "textcoords": "offset points", "ha": "left", "va": "bottom"}
+    ax.annotate(title, (0, 1), xytext=(0, 24 if subtitle else 8), fontsize=13.5,
+                fontweight="bold", color=INK, **kw)  # fmt: skip
     if subtitle:
-        ax.text(0, 1.04, subtitle, transform=ax.transAxes, fontsize=9.5, color=MUTED,
-                va="bottom", ha="left")  # fmt: skip
+        ax.annotate(subtitle, (0, 1), xytext=(0, 8), fontsize=9.5, color=MUTED, **kw)
 
 
 def save_fig(fig, name: str) -> Path:
@@ -71,25 +70,34 @@ def save_fig(fig, name: str) -> Path:
 
 
 def plot_model_comparison(table: pd.DataFrame, baselines: tuple[str, ...] = ()) -> plt.Figure:
-    """Forest plot of mean CV RMSLE with corrected 95% CI, best model on top."""
+    """Forest plot of mean CV RMSLE with corrected 95% CI, best model on top.
+
+    Models whose mean is more than 2x the best (e.g. the dummy) are drawn as an
+    off-scale label so they do not squash the interesting differences.
+    """
     t = table.sort_values("rmsle", ascending=False).reset_index(drop=True)
-    fig, ax = plt.subplots(figsize=(8.5, 0.55 * len(t) + 1.8))
     best = t["rmsle"].idxmin()
+    tied = int((t["p_vs_best"].isna() | (t["p_vs_best"] > 0.05)).sum())
+    near = t[t["rmsle"] < 2 * t.loc[best, "rmsle"]]
+    lo, hi = near["ci_low"].min(), near["ci_high"].max()
+    pad = 0.08 * (hi - lo)
+    fig, ax = plt.subplots(figsize=(8.5, 0.5 * len(t) + 1.9))
     for i, r in t.iterrows():
         colour = TEAL if i == best else (GREY if r["model"] in baselines else BLUE)
+        if r.rmsle >= 2 * t.loc[best, "rmsle"]:
+            ax.text(hi + pad, i, f"{r.rmsle:.4f}  (off scale)", va="center", ha="right",
+                    fontsize=9.5, color=MUTED)  # fmt: skip
+            continue
         ax.plot([r.ci_low, r.ci_high], [i, i], color=colour, lw=3, solid_capstyle="round")
         ax.plot(r.rmsle, i, "o", color=colour, ms=8, mec="white", mew=1.5)
-        ax.text(r.ci_high + 0.004, i, f"{r.rmsle:.4f}", va="center", fontsize=9.5, color=INK)
+        ax.text(r.ci_high + 0.002, i, f"{r.rmsle:.4f}", va="center", fontsize=9.5, color=INK)
+    ax.set_xlim(lo - pad, hi + pad)
     ax.set_yticks(range(len(t)), t["model"])
     ax.set_xlabel("RMSLE, repeated 5-fold CV (lower is better)")
-    ax.set_xscale("log")
-    ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:.2f}"))
-    ax.xaxis.set_minor_formatter(FuncFormatter(lambda v, _: ""))
     ax.grid(axis="y", visible=False)
+    title = f"{t.loc[best, 'model']} has the lowest error, but {tied} models are statistically tied"
     headline(
-        ax,
-        f"{t.loc[best, 'model']} is the most accurate model",
-        "Mean RMSLE with 95% corrected-resampling CI; log axis",
+        ax, title, "Mean RMSLE with 95% corrected-resampling CI; tied = paired p > 0.05 vs best"
     )
     return fig
 
@@ -207,3 +215,11 @@ def plot_intervals(
     ax.legend(loc="upper left", ncol=2, fontsize=9)
     headline(ax, title, subtitle)
     return fig
+
+
+def fig_headline(fig, title: str, subtitle: str | None = None, y: float = 1.04) -> None:
+    """Figure-level version of :func:`headline` for multi-panel figures."""
+    fig.text(0.0, y + (0.06 if subtitle else 0), title, fontsize=13.5, fontweight="bold",
+             color=INK, ha="left", va="bottom")  # fmt: skip
+    if subtitle:
+        fig.text(0.0, y, subtitle, fontsize=9.5, color=MUTED, ha="left", va="bottom")

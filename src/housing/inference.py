@@ -21,7 +21,7 @@ from pydantic import ValidationError
 
 from . import config
 from .data import FEATURE_COLUMNS, NUMERIC_COLUMNS
-from .interval import ConformalQuantileInterval
+from .interval import ConformalQuantileInterval, ConformalResidualInterval
 from .schema import HouseFeatures, PricePrediction
 
 
@@ -30,14 +30,14 @@ class HousingModel:
     """Everything needed at inference time, saved as one joblib file."""
 
     point: Any  # fitted TransformedTargetRegressor -> dollars
-    interval: ConformalQuantileInterval
+    interval: ConformalResidualInterval | ConformalQuantileInterval
     metadata: dict = field(default_factory=dict)
 
     def predict_frame(self, X: pd.DataFrame) -> pd.DataFrame:
         """Predict for a dataframe with the 79 raw feature columns."""
         X = X.loc[:, list(FEATURE_COLUMNS)]
-        lower, upper = self.interval.predict_interval(X)
         price = np.asarray(self.point.predict(X), dtype=float)
+        lower, upper = self.interval.predict_interval(X, price)
         # Guard against the (rare) case where the point forecast leaves the band.
         lower, upper = np.minimum(lower, price), np.maximum(upper, price)
         return pd.DataFrame({"price": price, "lower": lower, "upper": upper}, index=X.index)

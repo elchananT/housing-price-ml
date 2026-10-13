@@ -29,7 +29,7 @@ from . import __version__, config
 from .data import FEATURE_COLUMNS, load_data, split_xy, train_holdout_split
 from .evaluation import bootstrap_ci, regression_metrics
 from .inference import HousingModel
-from .interval import ConformalQuantileInterval, coverage_report
+from .interval import ConformalResidualInterval, coverage_report, sale_group
 from .models import build
 from .tune import load_params
 
@@ -37,28 +37,33 @@ FINAL_MODEL = "Blend (Ridge + LightGBM + XGBoost)"
 INTERVAL_ALPHA = 0.1
 
 
-def train_and_evaluate(model_name: str = FINAL_MODEL, lgbm_params: dict | None = None):
+def make_interval() -> ConformalResidualInterval:
+    """The shipped interval method: Mondrian conformal on out-of-fold log residuals."""
+    return ConformalResidualInterval(INTERVAL_ALPHA, group_fn=sale_group)
+
+
+def train_and_evaluate(
+    model_name: str = FINAL_MODEL, lgbm_params: dict | None = None, df: pd.DataFrame | None = None
+):
     """Run protocol steps 1-2 and return fitted artefacts plus metrics."""
-    df = load_data()
+    df = load_data() if df is None else df
     train, hold = train_holdout_split(df)
     X_tr, y_tr = split_xy(train)
     X_ho, y_ho = split_xy(hold)
 
     t0 = time.perf_counter()
     point = build(model_name, lgbm_params=lgbm_params).fit(X_tr, y_tr)
-    interval = ConformalQuantileInterval(INTERVAL_ALPHA, lgbm_params).fit(X_tr, y_tr)
+    interval = make_interval().fit(build(model_name, lgbm_params=lgbm_params), X_tr, y_tr)
     fit_s = time.perf_counter() - t0
 
     pred = point.predict(X_ho)
     metrics = regression_metrics(y_ho, pred)
     metrics["rmsle_ci95_bootstrap"] = list(bootstrap_ci(y_ho, pred))
-    lo, hi = interval.predict_interval(X_ho)
+    lo, hi = interval.predict_interval(X_ho, pred)
     cov = coverage_report(y_ho, lo, hi)
-    raw_lo, raw_hi = interval.predict_interval(X_ho, calibrated=False)
-    cov_raw = coverage_report(y_ho, raw_lo, raw_hi)
     return {
         "point": point, "interval": interval, "metrics": metrics, "coverage": cov,
-        "coverage_uncalibrated": cov_raw, "fit_seconds": fit_s,
+        "fit_seconds": fit_s,
         "n_train": len(train), "n_holdout": len(hold), "df": df,
     }  # fmt: skip
 
@@ -77,7 +82,7 @@ def main(argv: list[str] | None = None) -> None:
     X_all, y_all = split_xy(res["df"])
     t0 = time.perf_counter()
     point = build(args.model, lgbm_params=params).fit(X_all, y_all)
-    interval = ConformalQuantileInterval(INTERVAL_ALPHA, params).fit(X_all, y_all)
+    interval = make_interval().fit(build(args.model, lgbm_params=params), X_all, y_all)
     refit_s = time.perf_counter() - t0
 
     metadata = {
@@ -88,9 +93,9 @@ def main(argv: list[str] | None = None) -> None:
         "lgbm_params": params or "defaults",
         "target_transform": "log1p",
         "interval": {
-            "method": "conformalised quantile regression (LightGBM)",
+            "method": "Mondrian conformal, out-of-fold log residuals (normal / non-normal sale)",
             "nominal_coverage": 1 - INTERVAL_ALPHA,
-            "q_log": res["interval"].q_,
+            "log_margin_by_group": {**interval.q_, "pooled": interval.q_pooled_},
         },
         "n_rows_train_split": res["n_train"],
         "n_rows_holdout": res["n_holdout"],

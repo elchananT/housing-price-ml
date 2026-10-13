@@ -12,7 +12,7 @@ authors = [{ name = "Elchanan Treistman" }]
 requires-python = ">=3.11,<3.14"
 dependencies = [
     "numpy>=2.0",
-    "pandas>=2.2",
+    "pandas>=3.0",
     "scikit-learn>=1.5",
     "lightgbm>=4.3",
     "xgboost>=2.0",
@@ -40,7 +40,7 @@ packages = ["src/housing"]
 line-length = 100
 target-version = "py311"
 src = ["src", "tests"]
-extend-exclude = [".venv"]
+extend-exclude = [".venv", "notebooks"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "N", "NPY", "PD"]

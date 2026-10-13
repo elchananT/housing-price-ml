@@ -27,6 +27,7 @@ import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.compose import ColumnTransformer, make_column_selector
 from sklearn.impute import SimpleImputer
+from sklearn.model_selection import KFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import (
     OneHotEncoder,
@@ -192,7 +193,9 @@ def make_preprocessor(kind: str = "linear", cat_encoding: str | None = None) -> 
         cat_encoding = cat_encoding or "target"
         numeric = SimpleImputer(strategy="median")
         encoders = {
-            "target": TargetEncoder(smooth="auto", random_state=config.SEED),
+            "target": TargetEncoder(
+                smooth="auto", cv=KFold(5, shuffle=True, random_state=config.SEED)
+            ),
             "ordinal": OrdinalEncoder(
                 handle_unknown="use_encoded_value", unknown_value=-1, encoded_missing_value=-1
             ),

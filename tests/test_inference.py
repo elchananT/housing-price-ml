@@ -8,7 +8,7 @@ from pydantic import ValidationError
 
 from housing import config, data, models
 from housing.inference import HousingModel, predict_batch, predict_one, validate_records
-from housing.interval import ConformalQuantileInterval
+from housing.interval import ConformalQuantileInterval, ConformalResidualInterval, sale_group
 from housing.predict import main as predict_cli
 from housing.schema import CATEGORY_LEVELS, HouseFeatures
 
@@ -20,7 +20,9 @@ def tiny_bundle(raw):
     df = raw.sample(300, random_state=3)
     X, y = data.split_xy(df)
     point = models.build("Ridge").fit(X, y)
-    interval = ConformalQuantileInterval(0.1, n_splits=3).fit(X, y)
+    interval = ConformalResidualInterval(0.1, group_fn=sale_group, n_splits=3).fit(
+        models.build("Ridge"), X, y
+    )
     return HousingModel(point=point, interval=interval, metadata={"note": "test"})
 
 
@@ -99,7 +101,7 @@ def test_csv_input_with_blank_cells(raw, tiny_bundle, tmp_path, capsys):
 
 def test_interval_has_positive_width_and_reasonable_coverage_on_train(raw, tiny_bundle):
     X, y = data.split_xy(raw.sample(120, random_state=11))
-    lo, hi = tiny_bundle.interval.predict_interval(X)
+    lo, hi = tiny_bundle.interval.predict_interval(X, tiny_bundle.point.predict(X))
     assert (hi > lo).all()
     assert isinstance(pd.Series(lo).mean(), float)
 
@@ -109,3 +111,10 @@ def test_shipped_model_predicts_example_house():
     pred = predict_one(json.loads(EXAMPLE.read_text()))
     assert 50_000 < pred.price < 600_000
     assert pred.lower < pred.price < pred.upper
+
+
+def test_cqr_alternative_interval_still_works(raw):
+    X, y = data.split_xy(raw.sample(200, random_state=5))
+    iv = ConformalQuantileInterval(0.1, n_splits=3).fit(X, y)
+    lo, hi = iv.predict_interval(X)
+    assert (hi > lo).all()
