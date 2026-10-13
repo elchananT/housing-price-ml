@@ -87,7 +87,7 @@ Details: `docs/MODEL_CARD.md`, `docs/DATA_CARD.md`.
 
 ## Reproduce
 
-`make setup data test notebooks lint`. Runtimes on a 10-core Apple-silicon laptop: notebook 01 2 s, notebook 02 148 s (101 s of it the Optuna search), notebook 03 42 s, final training about 15 s. CI (`.github/workflows/ci.yml`) runs lint, tests and a 400-row smoke execution of all notebooks (`make notebooks-smoke`). Seeds are fixed (42); a clean-venv rerun reproduced the same hold-out numbers to all printed digits.
+`make setup data test notebooks lint`. Runtimes on a 10-core Apple-silicon laptop: notebook 01 2 s, notebook 02 148 s (101 s of it the Optuna search), notebook 03 42 s. CI (`.github/workflows/ci.yml`) runs lint, tests and a 400-row smoke execution of all notebooks (`make notebooks-smoke`). Seeds are fixed (42); a clean-venv rerun reproduced the same hold-out numbers to all printed digits.
 
 Predict from Python:
 
